@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>گردونه شانس</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    direction: rtl;
+    background-color: #f2f2f2;
+    text-align: center;
+    margin-top: 30px;
+}
+canvas {
+    background-color: white;
+    border: 3px solid #333;
+    border-radius: 50%;
+}
+.buttons {
+    margin-top: 20px;
+}
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin: 0 10px;
+    cursor: pointer;
+}
+#nameInput {
+    width: 300px;
+    font-size: 16px;
+    padding: 5px;
+}
+</style>
+</head>
+<body>
+
+<h1>🎉 گردونه شانس 🎉</h1>
+
+<p>اسم‌ها را با فاصله جدا کنید:</p>
+<input type="text" id="nameInput" placeholder="مثال: علی زهرا محمد سارا">
+<button id="setNamesBtn">ثبت اسم‌ها</button>
+
+<canvas id="wheel" width="600" height="600"></canvas>
+<div class="buttons">
+    <button id="spinBtn">بچرخان</button>
+    <button id="resetBtn">ریست</button>
+</div>
+
+<!-- صداهای آنلاین -->
+<audio id="tick" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="win" src="https://actions.google.com/sounds/v1/cartoon/boing.ogg"></audio>
+
+<script>
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const tickSound = document.getElementById("tick");
+const winSound = document.getElementById("win");
+const input = document.getElementById("nameInput");
+
+const width = canvas.width;
+const height = canvas.height;
+const radius = 250;
+
+let names = [];
+let originalNames = [];
+let spinning = false;
+
+// رسم گردونه
+function drawWheel(rotation){
+    ctx.clearRect(0,0,width,height);
+    const n = names.length;
+    if(n===0) return;
+    const angle = 2*Math.PI/n;
+    for(let i=0;i<n;i++){
+        ctx.beginPath();
+        ctx.moveTo(width/2,height/2);
+        ctx.arc(width/2,height/2,radius, rotation+i*angle, rotation+(i+1)*angle);
+        ctx.fillStyle = `hsl(${Math.random()*360},70%,70%)`;
+        ctx.fill();
+        ctx.stroke();
+
+        // متن
+        ctx.save();
+        ctx.translate(width/2,height/2);
+        ctx.rotate(rotation+(i+0.5)*angle);
+        ctx.textAlign="right";
+        ctx.fillStyle="#000";
+        ctx.font="18px Arial";
+        ctx.fillText(names[i], radius-10,0);
+        ctx.restore();
+    }
+
+    // فلش ثابت بالا
+    ctx.beginPath();
+    ctx.moveTo(width/2,height/2-radius-20);
+    ctx.lineTo(width/2-10,height/2-radius-40);
+    ctx.lineTo(width/2+10,height/2-radius-40);
+    ctx.closePath();
+    ctx.fillStyle="red";
+    ctx.fill();
+}
+
+// چرخش گردونه
+function spinWheel(){
+    if(spinning || names.length===0) return;
+    spinning = true;
+
+    const n = names.length;
+    const k = Math.floor(Math.random()*n);
+    const angle = 2*Math.PI/n;
+    const target = - (k*angle+angle/2)+Math.PI/2;
+    const totalRotation = 6*2*Math.PI + target;
+
+    let current=0;
+    let speed=0.05;
+    let lastTick=-1;
+
+    function animate(){
+        if(current<totalRotation){
+            current += speed;
+            if(current<totalRotation*0.3) speed+=0.002;
+            else if(current<totalRotation*0.7) speed*=0.995;
+            else speed*=0.97;
+            if(speed<0.01) speed=0.01;
+
+            drawWheel(current);
+
+            // صدای تق‌تق
+            const index = Math.floor((current%(2*Math.PI))/angle);
+            if(index!==lastTick){
+                tickSound.currentTime=0;
+                tickSound.play();
+                lastTick=index;
+            }
+
+            requestAnimationFrame(animate);
+        } else {
+            drawWheel(current);
+            winSound.play();
+            const chosen = names[k];
+            alert("انتخاب شد: " + chosen);
+            names.splice(k,1);
+            spinning=false;
+        }
+    }
+    animate();
+}
+
+// ریست
+function resetWheel(){
+    names = [...originalNames];
+    drawWheel(0);
+}
+
+// ثبت اسم‌ها با جداکننده فاصله
+document.getElementById("setNamesBtn").addEventListener("click", ()=>{
+    const val = input.value.trim();
+    if(val.length===0) return;
+    // جدا کردن با هر تعداد فاصله
+    names = val.split(/\s+/).filter(s=>s!=="");
+    originalNames = [...names];
+    drawWheel(0);
+});
+
+drawWheel(0);
+document.getElementById("spinBtn").addEventListener("click", spinWheel);
+document.getElementById("resetBtn").addEventListener("click", resetWheel);
+</script>
+
+</body>
+</html>
